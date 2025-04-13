@@ -162,6 +162,29 @@ export class DraftOrder {
   }
 
   /**
+   * This method deletes a draft order. It sends a request to the
+   * [Delete Draft Order](https://docs.medusajs.com/api/admin#draft-orders_deleteordereditsid) API route.
+   *
+   * @param id - The draft order's ID.
+   * @param headers - Headers to pass in the request.
+   *
+   * @example
+   * sdk.admin.draftOrder.delete("order_123")
+   * .then(({ id, object, deleted }) => {
+   *   console.log(id, object, deleted)
+   * })
+   */
+  async delete(id: string, headers?: ClientHeaders) {
+    return await this.client.fetch<HttpTypes.AdminDraftOrderResponse>(
+      `/admin/draft-orders/${id}`,
+      {
+        method: "DELETE",
+        headers,
+      }
+    )
+  }
+
+  /**
    * This method updates a draft order. It sends a request to the
    * [Update Draft Order](https://docs.medusajs.com/api/admin#draft-orders_postdraftordersid) API route.
    *
@@ -509,13 +532,13 @@ export class DraftOrder {
   /**
    * This method updates a shipping method in a draft order. It sends a request to the
    * [Update Draft Order Shipping Method](https://docs.medusajs.com/api/admin#draft-orders_postordereditsidshipping-methodsaction_id) API route.
-   * 
+   *
    * @param id - The draft order's ID.
    * @param methodId - The shipping method's ID.
    * @param body - The data to update the shipping method.
    * @param headers - Headers to pass in the request.
    * @returns The draft order preview's details.
-   * 
+   *
    * @example
    * sdk.admin.draftOrder.updateShippingMethod("order_123", "sm_123", {
    *  shipping_option_id: "so_123",
