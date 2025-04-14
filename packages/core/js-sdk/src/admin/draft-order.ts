@@ -175,7 +175,7 @@ export class DraftOrder {
    * })
    */
   async delete(id: string, headers?: ClientHeaders) {
-    return await this.client.fetch<HttpTypes.AdminDraftOrderResponse>(
+    return await this.client.fetch<HttpTypes.DeleteResponse<"draft-order">>(
       `/admin/draft-orders/${id}`,
       {
         method: "DELETE",
