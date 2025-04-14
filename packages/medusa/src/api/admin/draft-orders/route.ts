@@ -1,7 +1,6 @@
 import {
   createOrderWorkflow,
   getOrdersListWorkflow,
-  deleteDraftOrdersWorkflow,
 } from "@medusajs/core-flows"
 import {
   AuthenticatedMedusaRequest,
@@ -124,23 +123,4 @@ export const POST = async (
   )
 
   res.status(200).json({ draft_order: draftOrder })
-}
-
-export const DELETE = async (
-  req: AuthenticatedMedusaRequest,
-  res: MedusaResponse
-) => {
-  const { id } = req.params
-
-  await deleteDraftOrdersWorkflow(req.scope).run({
-    input: {
-      order_ids: [id],
-    },
-  })
-
-  res.status(200).json({
-    id,
-    object: "draft-order",
-    deleted: true,
-  })
 }
