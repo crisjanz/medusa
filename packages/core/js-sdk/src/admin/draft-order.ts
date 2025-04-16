@@ -529,6 +529,20 @@ export class DraftOrder {
     )
   }
 
+  async removeShippingMethod(
+    id: string,
+    shippingMethodId: string,
+    headers?: ClientHeaders
+  ) {
+    return await this.client.fetch<HttpTypes.AdminDraftOrderPreviewResponse>(
+      `/admin/draft-orders/${id}/edit/shipping-methods/method/${shippingMethodId}`,
+      {
+        method: "DELETE",
+        headers,
+      }
+    )
+  }
+
   /**
    * This method updates a shipping method in a draft order. It sends a request to the
    * [Update Draft Order Shipping Method](https://docs.medusajs.com/api/admin#draft-orders_postordereditsidshipping-methodsaction_id) API route.
