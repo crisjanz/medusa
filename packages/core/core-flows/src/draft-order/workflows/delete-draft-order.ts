@@ -6,8 +6,9 @@ import {
   transform,
 } from "@medusajs/framework/workflows-sdk"
 import { OrderDTO } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
-import { useQueryGraphStep } from "../../common"
+import { removeRemoteLinkStep, useQueryGraphStep } from "../../common"
 import { deleteDraftOrdersStep } from "../steps"
 
 /**
@@ -72,6 +73,10 @@ export const deleteDraftOrdersWorkflow = createWorkflow(
     })
 
     validateDraftOrdersStep({ orders })
+
+    removeRemoteLinkStep({
+      [Modules.ORDER]: { order_id: input.order_ids },
+    })
 
     deleteDraftOrdersStep({ orderIds: input.order_ids })
 
