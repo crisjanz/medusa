@@ -114,6 +114,14 @@ const generatedgeneratedHowToTutorialsSidebarSidebar = {
               "loaded": true,
               "isPathHref": true,
               "type": "ref",
+              "title": "Get Variant Inventory",
+              "path": "https://docs.medusajs.com/resources/commerce-modules/product/guides/variant-inventory",
+              "children": []
+            },
+            {
+              "loaded": true,
+              "isPathHref": true,
+              "type": "ref",
               "title": "Get Variant Price with Taxes",
               "path": "https://docs.medusajs.com/resources/commerce-modules/product/guides/price-with-taxes",
               "children": []
@@ -365,6 +373,15 @@ const generatedgeneratedHowToTutorialsSidebarSidebar = {
           "title": "Loyalty Points System",
           "path": "/how-to-tutorials/tutorials/loyalty-points",
           "description": "Learn how to implement a loyalty points system in your Medusa store.",
+          "children": []
+        },
+        {
+          "loaded": true,
+          "isPathHref": true,
+          "type": "ref",
+          "title": "Localization with Contentful",
+          "path": "/integrations/guides/contentful",
+          "description": "Learn how to implement localization in Medusa by integrating Contentful.",
           "children": []
         },
         {

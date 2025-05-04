@@ -281,7 +281,7 @@ const redirects = async () => {
     },
     {
       source: "/v1/development/events/events-list",
-      destination: "/resources/events-reference",
+      destination: "/resources/references/events",
       permanent: true,
     },
     {
@@ -362,6 +362,11 @@ const redirects = async () => {
     {
       source: "/v1/user-guide/multiwarehouse/locations",
       destination: "/user-guide/settings/locations-and-shipping/locations",
+      permanent: true,
+    },
+    {
+      source: "/learn/fundamentals/workflows/access-workflow-errors",
+      destination: "/learn/fundamentals/workflows/errors",
       permanent: true,
     },
   ]
