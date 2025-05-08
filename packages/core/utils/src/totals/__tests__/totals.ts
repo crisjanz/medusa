@@ -562,8 +562,8 @@ describe("Total calculation", function () {
      * TAX INCLUSIVE CART
      *
      * Total price -> 120 tax inclusive
-     * Tax rate -> 20%
      * Fixed discount -> 10 tax inclusive
+     * Tax rate -> 20%
      */
 
     const cart = {
@@ -598,14 +598,14 @@ describe("Total calculation", function () {
           tax_total: 18.333333333333332,
           total: 110,
           is_tax_inclusive: true,
-          // ----
+
           original_total: 120,
           original_tax_total: 20,
-          // ----
+
           discount_subtotal: 8.333333333333334,
           discount_tax_total: 1.6666666666666667,
           discount_total: 10,
-          // ----
+
           tax_lines: [
             {
               rate: 20,
@@ -623,25 +623,24 @@ describe("Total calculation", function () {
           ],
         },
       ],
-      // ----
       subtotal: 100,
       tax_total: 18.333333333333332,
       total: 110, // total is 120 - 10 tax inclusive discount
-      // ----
+
       original_item_subtotal: 100,
       original_item_tax_total: 20,
       original_item_total: 120,
       original_tax_total: 20,
       original_total: 120,
-      // ----
+
       discount_subtotal: 8.333333333333334,
       discount_tax_total: 1.6666666666666667,
       discount_total: 10,
-      // ----
+
       item_subtotal: 100,
       item_tax_total: 18.333333333333332,
       item_total: 110,
-      // ----
+
       credit_line_subtotal: 0,
       credit_line_tax_total: 0,
       credit_line_total: 0,

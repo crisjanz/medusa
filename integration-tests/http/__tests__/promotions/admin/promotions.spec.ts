@@ -736,30 +736,29 @@ medusaIntegrationTestRunner({
           /**
            * Orignal total -> 1300 DKK (tax incl.)
            * Tax rate -> 25%
-           * Promotion -> FIXED 100 DKK(tax incl.)
+           * Promotion -> FIXED 100 DKK (tax incl.)
            *
            * We want total to be 1300 DKK - 100 DKK = 1200 DKK
-           *
            */
           expect(cart).toEqual(
             expect.objectContaining({
               currency_code: "dkk",
-              // ----
+
               subtotal: 1040, // taxable base (item subtotal - discount subtotal) = 1040 - 80 = 960
               total: 1200, // total = taxable base * (1 + tax rate) = 960 * (1 + 0.25) = 1200
               tax_total: 240,
-              // ----
+
               original_total: 1300,
               original_tax_total: 260,
-              // ----
+
               discount_total: 100,
               discount_subtotal: 80,
               discount_tax_total: 20,
-              // ----
+
               item_total: 1200,
               item_subtotal: 1040,
               item_tax_total: 240,
-              // ----
+
               original_item_total: 1300,
               original_item_subtotal: 1040,
               original_item_tax_total: 260,
