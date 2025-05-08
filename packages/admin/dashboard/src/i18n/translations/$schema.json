@@ -2038,7 +2038,7 @@
                   "type": "string"
                 }
               },
-              "required": ["label", "hint"],
+              "required": ["label", "hint", "placeholder"],
               "additionalProperties": false
             },
             "subtitle": {
@@ -2051,7 +2051,7 @@
                   "type": "string"
                 }
               },
-              "required": ["label"],
+              "required": ["label", "placeholder"],
               "additionalProperties": false
             },
             "handle": {
@@ -2067,7 +2067,7 @@
                   "type": "string"
                 }
               },
-              "required": ["label", "tooltip"],
+              "required": ["label", "tooltip", "placeholder"],
               "additionalProperties": false
             },
             "description": {
@@ -2083,7 +2083,7 @@
                   "type": "string"
                 }
               },
-              "required": ["label", "hint"],
+              "required": ["label", "hint", "placeholder"],
               "additionalProperties": false
             },
             "discountable": {
@@ -7330,6 +7330,9 @@
             "clearAll": {
               "type": "string"
             },
+            "taxInclusive": {
+              "type": "string"
+            },
             "amount": {
               "type": "object",
               "properties": {
@@ -7396,6 +7399,7 @@
             "allocation",
             "addCondition",
             "clearAll",
+            "taxInclusive",
             "amount",
             "conditions"
           ],
@@ -7592,6 +7596,19 @@
                 }
               },
               "required": ["existing", "new", "none"],
+              "additionalProperties": false
+            },
+            "taxInclusive": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": ["title", "description"],
               "additionalProperties": false
             },
             "status": {
@@ -7820,6 +7837,7 @@
             "and",
             "selectAttribute",
             "campaign",
+            "taxInclusive",
             "status",
             "method",
             "max_quantity",
