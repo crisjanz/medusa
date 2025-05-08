@@ -8,4 +8,4 @@
 "@medusajs/medusa": patch
 ---
 
-feat(promotion, dashboard, core-flows, cart,types, utils, medusa): tax inclusive promotions
+feat(promotion, dashboard, core-flows, cart, types, utils, medusa): tax inclusive promotions
