@@ -4670,7 +4670,6 @@ moduleIntegrationTestRunner({
               shipping_method_id: "shipping_method_standard",
               amount: 33.333333333333336,
               code: "PROMOTION_TEST",
-              is_tax_inclusive: false,
             },
           ])
         })
@@ -4766,7 +4765,6 @@ moduleIntegrationTestRunner({
               item_id: "item_cotton_tshirt2",
               amount: 1000,
               code: "PROMOTION_TEST",
-              is_tax_inclusive: false,
             },
           ])
         })
@@ -4947,14 +4945,12 @@ moduleIntegrationTestRunner({
               item_id: "item_cotton_tshirt2",
               amount: 2000,
               code: "PROMOTION_TEST",
-              is_tax_inclusive: false,
             },
             {
               action: "addItemAdjustment",
               item_id: "item_cotton_tshirt",
               amount: 1000,
               code: "PROMOTION_TEST",
-              is_tax_inclusive: false,
             },
           ])
         })
@@ -5110,7 +5106,6 @@ moduleIntegrationTestRunner({
                 item_id: "item_cotton_tshirt",
                 amount: 500,
                 code: "PROMOTION_TEST",
-                is_tax_inclusive: false,
               },
             ])
           })
@@ -5203,14 +5198,12 @@ moduleIntegrationTestRunner({
                 item_id: "item_cotton_tshirt",
                 amount: 2500,
                 code: "BUY50GET100",
-                is_tax_inclusive: false,
               },
               {
                 action: "addItemAdjustment",
                 amount: 10,
                 code: "BUY10GET20",
                 item_id: "item_cotton_tshirt",
-                is_tax_inclusive: false,
               },
             ])
           })
@@ -5313,21 +5306,18 @@ moduleIntegrationTestRunner({
                   item_id: "item_cotton_tshirt2",
                   amount: 1225,
                   code: "BUY50GET100",
-                  is_tax_inclusive: false,
                 },
                 {
                   action: "addItemAdjustment",
                   item_id: "item_cotton_tshirt",
                   amount: 1275,
                   code: "BUY50GET100",
-                  is_tax_inclusive: false,
                 },
                 {
                   action: "addItemAdjustment",
                   item_id: "item_cotton_tshirt2",
                   amount: 10,
                   code: "BUY10GET20",
-                  is_tax_inclusive: false,
                 },
               ])
             )
@@ -5375,14 +5365,12 @@ moduleIntegrationTestRunner({
                 item_id: "item_cotton_tshirt1",
                 amount: 500,
                 code: "PROMOTION_TEST",
-                is_tax_inclusive: false,
               },
               {
                 action: "addItemAdjustment",
                 item_id: "item_cotton_tshirt",
                 amount: 500,
                 code: "PROMOTION_TEST",
-                is_tax_inclusive: false,
               },
             ])
           })
