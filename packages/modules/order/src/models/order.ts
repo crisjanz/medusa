@@ -54,14 +54,7 @@ const _Order = model
     }),
   })
   .cascades({
-    delete: [
-      "summary",
-      "items",
-      "shipping_methods",
-      "billing_address",
-      "shipping_address",
-      "transactions",
-    ],
+    delete: ["summary", "items", "shipping_methods", "transactions"],
   })
   .indexes([
     {
