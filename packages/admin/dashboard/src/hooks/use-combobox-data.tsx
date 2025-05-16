@@ -57,7 +57,7 @@ export const useComboboxData = <
 
   // always load selected value in case current data dosn't contain the value
   const { data: selectedData } = useQuery({
-    queryKey: [...queryKey, defaultValue],
+    queryKey: [...queryKey, selectedValue],
     queryFn: async () => {
       return queryFn({
         id: selectedValue,
