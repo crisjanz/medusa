@@ -55,7 +55,7 @@ export const useComboboxData = <
     enabled: !!defaultValue && enabled,
   })
 
-  // if value is selected while searchhing, when the query is removed value might not be present in the
+  // always load selected value in case current data dosn't contain the value
   const { data: selectedData } = useQuery({
     queryKey: [...queryKey, defaultValue],
     queryFn: async () => {
