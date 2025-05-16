@@ -43,7 +43,7 @@ export const useComboboxData = <
 
   const queryInitialDataBy = defaultValueKey || "id"
   const { data: initialData } = useQuery({
-    queryKey: queryKey,
+    queryKey: [...queryKey, defaultValue],
     queryFn: async () => {
       return queryFn({
         [queryInitialDataBy]: defaultValue,

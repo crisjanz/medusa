@@ -272,10 +272,7 @@ export function ManageVariantInventoryItemsForm({
 
   return (
     <RouteFocusModal.Form form={form}>
-      <KeyboundForm
-        className="flex h-full flex-col overflow-hidden"
-        onSubmit={handleSubmit}
-      >
+      <KeyboundForm className="flex h-full flex-col" onSubmit={handleSubmit}>
         <RouteFocusModal.Header>
           <div className="flex items-center justify-end gap-x-2">
             <RouteFocusModal.Close asChild>
@@ -288,7 +285,7 @@ export function ManageVariantInventoryItemsForm({
             </Button>
           </div>
         </RouteFocusModal.Header>
-        <RouteFocusModal.Body className="flex justify-center">
+        <RouteFocusModal.Body className="flex justify-center overflow-auto">
           <div className="flex w-full flex-col gap-y-8 px-6 pt-12 md:w-[720px] md:pt-24">
             <Heading>
               {t(
@@ -298,7 +295,7 @@ export function ManageVariantInventoryItemsForm({
               )}
             </Heading>
 
-            <div className="grid gap-y-4">
+            <div className="grid gap-y-4 pb-8">
               <div className="flex items-start justify-between gap-x-4">
                 <div className="flex flex-col">
                   <Form.Label>{variant.title}</Form.Label>
