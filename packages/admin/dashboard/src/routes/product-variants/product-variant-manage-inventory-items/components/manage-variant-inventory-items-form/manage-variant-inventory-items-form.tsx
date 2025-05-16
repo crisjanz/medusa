@@ -3,7 +3,12 @@ import { XMarkMini } from "@medusajs/icons"
 import { AdminProductVariant, HttpTypes } from "@medusajs/types"
 import { Button, Heading, IconButton, Input, Label, toast } from "@medusajs/ui"
 import i18next from "i18next"
-import { useFieldArray, useForm, UseFormReturn } from "react-hook-form"
+import {
+  useFieldArray,
+  useForm,
+  UseFormReturn,
+  useWatch,
+} from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import * as zod from "zod"
 
@@ -79,10 +84,16 @@ function VariantInventoryItemRow({
 }: VariantInventoryItemRowProps) {
   const { t } = useTranslation()
 
+  const selectedInventoryItemId = useWatch({
+    control: form.control,
+    name: `inventory.${inventoryIndex}.inventory_item_id`,
+  })
+
   const items = useComboboxData({
     queryKey: ["inventory_items"],
     defaultValueKey: "id",
     defaultValue: inventoryItem.inventory_item_id,
+    selectedValue: selectedInventoryItemId,
     queryFn: (params) => sdk.admin.inventoryItem.list(params),
     getOptions: (data) =>
       data.inventory_items.map((item) => ({

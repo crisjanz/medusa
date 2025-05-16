@@ -28,6 +28,7 @@ export const useComboboxData = <
   getOptions,
   defaultValue,
   defaultValueKey,
+  selectedValue,
   pageSize = 10,
   enabled = true,
 }: {
@@ -36,6 +37,7 @@ export const useComboboxData = <
   getOptions: (data: TResponse) => { label: string; value: string }[]
   defaultValueKey?: keyof TParams
   defaultValue?: string | string[]
+  selectedValue?: string
   pageSize?: number
   enabled?: boolean
 }) => {
@@ -51,6 +53,18 @@ export const useComboboxData = <
       } as TParams)
     },
     enabled: !!defaultValue && enabled,
+  })
+
+  // if value is selected while searchhing, when the query is removed value might not be present in the
+  const { data: selectedData } = useQuery({
+    queryKey: [...queryKey, defaultValue],
+    queryFn: async () => {
+      return queryFn({
+        id: selectedValue,
+        limit: 1,
+      } as TParams)
+    },
+    enabled: !!selectedValue && enabled,
   })
 
   const { data, ...rest } = useInfiniteQuery({
@@ -73,7 +87,7 @@ export const useComboboxData = <
 
   const options = data?.pages.flatMap((page) => getOptions(page)) ?? []
   const defaultOptions = initialData ? getOptions(initialData) : []
-
+  const selectedOptions = selectedData ? getOptions(selectedData) : []
   /**
    * If there are no options and the query is empty, then the combobox should be disabled,
    * as there is no data to search for.
@@ -84,6 +98,14 @@ export const useComboboxData = <
   // make sure that the default value is included in the options
   if (defaultValue && defaultOptions.length && !searchValue) {
     defaultOptions.forEach((option) => {
+      if (!options.find((o) => o.value === option.value)) {
+        options.unshift(option)
+      }
+    })
+  }
+
+  if (selectedValue && selectedOptions.length) {
+    selectedOptions.forEach((option) => {
       if (!options.find((o) => o.value === option.value)) {
         options.unshift(option)
       }
