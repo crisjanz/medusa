@@ -1,5 +1,5 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
-import { IOrderModuleService } from "@medusajs/types"
+import { IOrderModuleService, OrderDTO } from "@medusajs/types"
 import { Modules } from "@medusajs/utils"
 import {
   adminHeaders,
@@ -499,6 +499,165 @@ medusaIntegrationTestRunner({
           credit_line_total: 0,
         })
       })
+    })
+
+    it("should delete an order and related entities", async () => {
+      const toDeleteOrder = await orderModule.createOrders({
+        region_id: "test_region_id",
+        email: "foo@bar.com",
+        metadata: {
+          foo: "bar",
+        },
+        items: [
+          {
+            title: "Custom Item 1",
+            quantity: 1,
+            unit_price: 50,
+            adjustments: [
+              {
+                code: "VIP_25 ETH",
+                amount: "0.000000000000000005",
+                description: "VIP discount",
+                promotion_id: "prom_123",
+                provider_id: "coupon_kings",
+              },
+            ],
+          },
+        ],
+        sales_channel_id: "test",
+        shipping_address: {
+          first_name: "Shipping 1",
+          last_name: "Test 1",
+          address_1: "Test 1",
+          city: "Test 1",
+          country_code: "US",
+          postal_code: "12345",
+          phone: "12345",
+        },
+        billing_address: {
+          first_name: "Billing 1",
+          last_name: "Test 1",
+          address_1: "Test 1",
+          city: "Test 1",
+          country_code: "US",
+          postal_code: "12345",
+        },
+        shipping_methods: [
+          {
+            name: "Test shipping method",
+            amount: 10,
+            data: {},
+            tax_lines: [
+              {
+                description: "shipping Tax 1",
+                tax_rate_id: "tax_usa_shipping",
+                code: "code",
+                rate: 10,
+              },
+            ],
+            adjustments: [
+              {
+                code: "VIP_10",
+                amount: 1,
+                description: "VIP discount",
+                promotion_id: "prom_123",
+              },
+            ],
+          },
+        ],
+        currency_code: "usd",
+        customer_id: "joe",
+      })
+
+      const persistedOrder = (await orderModule.createOrders({
+        region_id: "test_region_id",
+        email: "foo@bar.com",
+        metadata: {
+          foo: "bar",
+        },
+        items: [
+          {
+            title: "Custom Item 2",
+            quantity: 1,
+            unit_price: 50,
+            adjustments: [
+              {
+                code: "VIP_25 ETH",
+                amount: "0.000000000000000005",
+                description: "VIP discount",
+                promotion_id: "prom_123",
+                provider_id: "coupon_kings",
+              },
+            ],
+          },
+        ],
+        sales_channel_id: "test",
+        shipping_address: {
+          first_name: "Shipping 2",
+          last_name: "Test 2",
+          address_1: "Test 2",
+          city: "Test 2",
+          country_code: "US",
+          postal_code: "12345",
+          phone: "12345",
+        },
+        billing_address: {
+          first_name: "Billing 2",
+          last_name: "Test 2",
+          address_1: "Test 2",
+          city: "Test 2",
+          country_code: "US",
+          postal_code: "12345",
+        },
+        shipping_methods: [
+          {
+            name: "Test shipping method",
+            amount: 10,
+            data: {},
+            tax_lines: [
+              {
+                description: "shipping Tax 2",
+                tax_rate_id: "tax_usa_shipping",
+                code: "code",
+                rate: 10,
+              },
+            ],
+            adjustments: [
+              {
+                code: "VIP_10",
+                amount: 1,
+                description: "VIP discount",
+                promotion_id: "prom_123",
+              },
+            ],
+          },
+        ],
+        currency_code: "usd",
+        customer_id: "joe",
+      })) as OrderDTO & {
+        shipping_address_id: string
+        billing_address_id: string
+      }
+
+      await orderModule.deleteOrders([toDeleteOrder.id])
+
+      const orders = (
+        await api.get("/admin/orders?fields=*shipping_address", adminHeaders)
+      ).data.orders
+
+      expect(orders.length).toBe(1)
+      expect(orders[0].id).toBe(persistedOrder.id)
+
+      const addresses = (await dbConnection.raw("select * from order_address;"))
+        .rows
+
+      expect(addresses.length).toBe(2)
+      expect(addresses.map((a) => a.id)).toEqual(
+        expect.arrayContaining([
+          persistedOrder.shipping_address_id,
+          persistedOrder.billing_address_id,
+        ])
+      )
     })
   },
 })

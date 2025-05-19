@@ -728,7 +728,14 @@ export default class OrderModuleService
     const creditLinesToCreate: CreateOrderCreditLineDTO[] = []
     const createdOrders: InferEntityType<typeof Order>[] = []
 
-    for (const { items, shipping_methods, credit_lines, ...order } of data) {
+    for (const {
+      items,
+      shipping_methods,
+      credit_lines,
+      shipping_address,
+      billing_address,
+      ...order
+    } of data) {
       const ord = order as any
 
       const shippingMethods = shipping_methods?.map((sm: any) => {
@@ -842,6 +849,45 @@ export default class OrderModuleService
         source.shipping_address_id = createdAddress.id
       }
     })
+  }
+
+  @InjectTransactionManager()
+  // @ts-expect-error
+  async deleteOrders(
+    orderIds: string | string[],
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<void> {
+    const ids = Array.isArray(orderIds) ? orderIds : [orderIds]
+
+    const orders = await this.orderService_.list(
+      { id: ids },
+      {
+        select: ["id", "shipping_address_id", "billing_address_id"],
+      },
+      sharedContext
+    )
+
+    const orderAddressIds = orders
+      .map((order) => [order.shipping_address_id, order.billing_address_id])
+      .flat(1)
+
+    const orderChanges = await this.orderChangeService_.list(
+      { order_id: ids },
+      { select: ["id"] },
+      sharedContext
+    )
+
+    const orderChangeIds = orderChanges.map((orderChange) => orderChange.id)
+
+    await Promise.all([
+      this.orderAddressService_.delete(orderAddressIds, sharedContext),
+      this.orderChangeService_.delete(orderChangeIds, sharedContext),
+    ])
+
+    // Delete order changes & actions
+    await this.orderChangeService_.delete(orderChangeIds, sharedContext)
+
+    await super.deleteOrders(ids, sharedContext)
   }
 
   // @ts-expect-error
