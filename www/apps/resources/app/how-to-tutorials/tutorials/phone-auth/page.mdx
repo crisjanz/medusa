@@ -22,11 +22,11 @@ In this tutorial, you will learn how to implement phone number authentication in
 
 When you install a Medusa application, you get a fully-fledged commerce platform with a Framework for customization. The Medusa application's commerce features are built around [Commerce Modules](../../../commerce-modules/page.mdx), which are available out-of-the-box. These features include authentication with custom providers and for custom user or actor types.
 
-In this tutorial, you'll learn how to implement a custom authentication provider that allows customers to log in with their phone number. You'll also integrate [Twilio SMS](https://www.twilio.com/en-us/messaging/channels/sms) to send SMS messages to those customers with the one-time password (OTP) for authentication.
+In this tutorial, you'll learn how to implement a custom authentication provider that allows customers to log in with their phone number. You'll also integrate [Twilio](https://www.twilio.com/en-us/messaging/channels/sms) to send SMS messages to those customers with the one-time password (OTP) for authentication.
 
 <Note>
 
-Twilio SMS is just one option to deliver the OTP to the customer. You can integrate a different SMS provider or use a different method to send OTPs.
+Twilio is just one option to deliver the OTP to the customer. You can integrate a different SMS provider or use a different method to send OTPs.
 
 </Note>
 
@@ -36,7 +36,7 @@ By following this tutorial, you will learn how to:
 
 - Install and set up Medusa.
 - Implement a custom phone authentication provider.
-- Integrate Twilio SMS to send OTPs.
+- Integrate Twilio to send OTPs by SMS.
 - Customize the Next.js Starter Storefront to allow customers to log in with their phone numbers.
 
 You can follow this tutorial whether you're new to Medusa or an advanced Medusa developer.
@@ -113,7 +113,7 @@ Check out the [troubleshooting guides](../../../troubleshooting/create-medusa-ap
 
 In Medusa, you integrate custom authentication providers by creating an [Authentication Module Provider](../../../commerce-modules/auth/auth-providers/page.mdx). Then, you can use that provider to authenticate users using custom logic.
 
-In this step, you'll create a Phone Authentication Module Provider that allows users to log in with their phone numbers and an OTP. Later, you'll integrate Twilio SMS to send the OTPs to the users, and customize the storefront to allow customers to log in with their phone numbers.
+In this step, you'll create a Phone Authentication Module Provider that allows users to log in with their phone numbers and an OTP. Later, you'll integrate Twilio to send the OTPs to the users, and customize the storefront to allow customers to log in with their phone numbers.
 
 <Note title="Good to Know">
 
@@ -456,11 +456,11 @@ The method receives other parameters, which you can find in the [Create Auth Mod
 
 In the method, you return an error if the `phone` property is not provided in the request body, or if a user with that phone number doesn't exist.
 
-Next, you generate a 6-digit OTP using the `generateOTP` method. Notice that you currently log the OTP for debugging purposes. You can remove this line later once you integrate Twilio SMS.
+Next, you generate a 6-digit OTP using the `generateOTP` method. Notice that you currently log the OTP for debugging purposes. You can remove this line later once you integrate Twilio.
 
 The OTP is hashed and stored in the `provider_metadata` property of the user's auth identity. The `provider_metadata` property is a JSON object that stores additional information about the auth identity.
 
-Then, you emit an event with the generated OTP and the user's phone number. This allows you later to handle the event and send the OTP to the user using services like Twilio SMS.
+Then, you emit an event with the generated OTP and the user's phone number. This allows you later to handle the event and send the OTP to the user using services like Twilio.
 
 #### authenticate Return Value
 
@@ -833,7 +833,7 @@ If you check the logs of the Medusa application, you'll see that the OTP was gen
 info:    Generated OTP: 576794
 ```
 
-As mentioned before, this is only for debugging purposes. In the next step, you'll implement the logic to send the OTP to the user using Twilio SMS.
+As mentioned before, this is only for debugging purposes. In the next step, you'll implement the logic to send the OTP to the user using Twilio.
 
 So, to verify the OTP, you'll send a request to the [Verify Callback API route](!api!/store#auth_postactor_typeauth_providercallback):
 
@@ -1278,13 +1278,13 @@ The `createNotifications` method accepts an object with the following properties
 
 To test out the Twilio Notification Module Provider, you can follow the steps in the [Test Out Phone Authentication](#test-out-phone-authentication) section.
 
-After you authenticate the customer, the OTP will be sent to the customer's phone number using Twilio SMS. Then, you can use the OTP to verify the authentication and receive a JWT token.
+After you authenticate the customer, the OTP will be sent to the customer's phone number using Twilio. Then, you can use the OTP to verify the authentication and receive a JWT token.
 
 Alternatively, you can also test it out after customizing the Next.js Starter Storefront, which you'll do in the next step.
 
 <Note>
 
-Make sure to remove the OTP logging line in the `generateOTP` method of the Phone Authentication Module Provider's service now that you have integrated Twilio SMS.
+Make sure to remove the OTP logging line in the `generateOTP` method of the Phone Authentication Module Provider's service now that you have integrated Twilio.
 
 </Note>
 
@@ -2243,7 +2243,7 @@ Any `POST` request to the `/store/customers/me` route will now be validated to e
 
 ## Next Steps
 
-You've now implemented phone authentication in Medusa with Twilio SMS integration. You can further customize the phone authentication feature based on your business use case.
+You've now implemented phone authentication in Medusa with Twilio integration. You can further customize the phone authentication feature based on your business use case.
 
 ### Authenticate Other Actor Types
 
