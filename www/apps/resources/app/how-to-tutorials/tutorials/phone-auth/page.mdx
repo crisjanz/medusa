@@ -18,19 +18,17 @@ export const metadata = {
 
 # {metadata.title}
 
-In this tutorial, you will learn how to implement phone authentication in your Medusa application to allow customers to log in with their phone numbers.
+In this tutorial, you will learn how to implement phone number authentication in your Medusa application.
 
-When you install a Medusa application, you get a fully-fledged commerce platform with a Framework for customization. The Medusa application's commerce features are built around [Commerce Modules](../../../commerce-modules/page.mdx), which are available out-of-the-box. These features include authentication with custom providers and for custom user types.
+When you install a Medusa application, you get a fully-fledged commerce platform with a Framework for customization. The Medusa application's commerce features are built around [Commerce Modules](../../../commerce-modules/page.mdx), which are available out-of-the-box. These features include authentication with custom providers and for custom user or actor types.
 
-In this tutorial, you'll learn how to implement a custom authentication provider that allows users to log in with their phone number. You'll also integrate [Twilio SMS](https://www.twilio.com/en-us/messaging/channels/sms) to send SMS messages to those users with one-time passwords (OTPs) for authentication.
+In this tutorial, you'll learn how to implement a custom authentication provider that allows customers to log in with their phone number. You'll also integrate [Twilio SMS](https://www.twilio.com/en-us/messaging/channels/sms) to send SMS messages to those customers with the one-time password (OTP) for authentication.
 
 <Note>
 
-You can integrate a different SMS provider or use a different method to send OTPs. The tutorial will focus on the Medusa application and the Twilio SMS provider, but you can adapt it to your needs.
+Twilio SMS is just one option to deliver the OTP to the customer. You can integrate a different SMS provider or use a different method to send OTPs.
 
 </Note>
-
-You can follow this tutorial whether you're new to Medusa or an advanced Medusa developer.
 
 ## Summary
 
@@ -41,7 +39,9 @@ By following this tutorial, you will learn how to:
 - Integrate Twilio SMS to send OTPs.
 - Customize the Next.js Starter Storefront to allow customers to log in with their phone numbers.
 
-{/* TODO add diagram */}
+You can follow this tutorial whether you're new to Medusa or an advanced Medusa developer.
+
+![Diagram showcasing the phone authentication flow](https://res.cloudinary.com/dza7lstvk/image/upload/v1747744941/Medusa%20Resources/phone-auth-overview_bt5yrp.jpg)
 
 <Note>
 
@@ -57,8 +57,7 @@ While this tutorial focuses on supporting phone authentication for customers, yo
     icon: Github,
   },
   {
-    // TODO update
-    href: "https://res.cloudinary.com/dza7lstvk/raw/upload/v1744212595/OpenApi/Loyalty-Points_jwi5e9.yaml",
+    href: "https://res.cloudinary.com/dza7lstvk/raw/upload/v1747745832/OpenApi/Phone_Auth_g4xsqv.yaml",
     title: "OpenApi Specs for Postman",
     text: "Import this OpenApi Specs file into tools like Postman.",
     icon: PlaySolid,
@@ -94,7 +93,7 @@ You'll first be asked for the project's name. Then, when asked whether you want 
 
 Afterward, the installation process will start, which will install the Medusa application in a directory with your project's name, and the Next.js Starter Storefront in a separate directory with the `{project-name}-storefront` name.
 
-<Note title="Why is the storefront installed separately">
+<Note title="Why is the storefront installed separately?">
 
 The Medusa application is composed of a headless Node.js server and an admin dashboard. The storefront is installed or custom-built separately and connects to the Medusa application through its REST endpoints, called [API routes](!docs!/learn/fundamentals/api-routes). Learn more in [Medusa's Architecture documentation](!docs!/learn/introduction/architecture).
 
@@ -102,7 +101,7 @@ The Medusa application is composed of a headless Node.js server and an admin das
 
 Once the installation finishes successfully, the Medusa Admin dashboard will open with a form to create a new user. Enter the user's credentials and submit the form. Afterward, you can log in with the new user and explore the dashboard.
 
-<Note title="Ran into Errors">
+<Note title="Ran into Errors?">
 
 Check out the [troubleshooting guides](../../../troubleshooting/create-medusa-app-errors/page.mdx) for help.
 
@@ -122,6 +121,17 @@ An Authentication Module Provider doesn't need to handle storing and managing sp
 
 </Note>
 
+### Prerequisite: Install jsonwebtoken
+
+In the Phone Authentication Module Provider, you'll use the `jsonwebtoken` package to sign and verify the OTPs.
+
+To install the package, run the following command in the Medusa application directory:
+
+```bash npm2yarn
+npm install jsonwebtoken
+npm install @types/jsonwebtoken --save-dev
+```
+
 ### a. Create Module Directory
 
 Modules are created under the `src/modules` directory. So, start by creating the directory `src/modules/phone-auth`.
@@ -132,7 +142,15 @@ A module has a service that contains its logic. For Authentication Module Provid
 
 To create the service of the Phone Authentication Module Provider, create the file `src/modules/phone-auth/service.ts` with the following content:
 
-```ts title="src/modules/phone-auth/service.ts"
+export const phoneAuthServiceHighlights = [
+  ["10", "logger", "Resolve Logger class to log debug messages."],
+  ["11", "event_bus", "Resolve Event Module's service to emit events."],
+  ["15", "jwtSecret", "JWT secret to sign and verify OTPs."],
+  ["19", "DISPLAY_NAME", "Human-readable name for the provider."],
+  ["20", "identifier", "Unique identifier for the provider."],
+]
+
+```ts title="src/modules/phone-auth/service.ts" highlights={phoneAuthServiceHighlights}
 import { 
   AbstractAuthModuleProvider, 
   AbstractEventBusModuleService, 
@@ -174,8 +192,8 @@ An Authentication Module Provider's service must extend the `AbstractAuthModuleP
 
 An Authentication Module Provider must also have the following static properties:
 
-- `identifier`: A unique identifier for the module.
-- `DISPLAY_NAME`: A human-readable name for the module. This name is used for display purposes.
+- `identifier`: A unique identifier for the provider.
+- `DISPLAY_NAME`: A human-readable name for the provider. This name is used for display purposes.
 
 A module provider's constructor receives two parameters:
 
@@ -210,7 +228,7 @@ So, add the `validateOptions` method to the `PhoneAuthService` class:
 ```ts title="src/modules/phone-auth/service.ts"
 // other imports...
 import { 
-  MedusaError
+  MedusaError,
 } from "@medusajs/framework/utils"
 
 class PhoneAuthService extends AbstractAuthModuleProvider {
@@ -232,17 +250,23 @@ In the method, you throw an error if the `jwtSecret` option is not set.
 
 ### d. Implement register Method
 
-When a customer (or other actor types) register in your application, they must also have an [auth identity](../../../commerce-modules/auth/auth-identity-and-actor-types/page.mdx) that allows them to login.
+When a customer (or another actor type) registers in your application, they must also have an [auth identity](../../../commerce-modules/auth/auth-identity-and-actor-types/page.mdx) that allows them to login.
 
-The `register` method of an auth provider uses custom logic to create the auth identity for the actor type. In the method, you can perform custom validation and specify the custom authentication details to store for the user's auth identity.
+The `register` method of an auth provider uses custom logic to create the auth identity for the actor type (such as customer). In the method, you can perform custom validation and specify the custom authentication details to store for the user's auth identity.
 
-{/* TODO add diagram */}
+Medusa uses the `register` method to create an auth identity that will be associated with the customer when they register. You can learn more in the [Authentication Flows](../../../commerce-modules/auth/auth-flows/page.mdx) documentation.
 
-Medusa uses the `register` method when retrieving a registration token for a customer when they register. You can learn more in the [Authentication Flows](../../../commerce-modules/auth/auth-flows/page.mdx) documentation.
+![Diagram showcasing the relation between a customer and auth identity](https://res.cloudinary.com/dza7lstvk/image/upload/v1747747179/Medusa%20Resources/customer-auth-identity_je1bvh.jpg)
 
 So, add the `register` method to the `PhoneAuthService` class:
 
-```ts title="src/modules/phone-auth/service.ts"
+export const registerHighlights = [
+  ["14", "phone", "Extract phone from request body."],
+  ["24", "retrieve", "Check if user with phone number already exists."],
+  ["33", "create", "Create a new auth identity for the user."],
+]
+
+```ts title="src/modules/phone-auth/service.ts" highlights={registerHighlights}
 // other imports...
 import { 
   AuthenticationInput, 
@@ -261,7 +285,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     if (!phone) {
       return {
         success: false,
-        error: "Phone number is required"
+        error: "Phone number is required",
       }
     }
 
@@ -272,7 +296,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
 
       return {
         success: false,
-        error: "User with phone number already exists"
+        error: "User with phone number already exists",
       }
     } catch (error) {
       const user = await authIdentityProviderService.create({
@@ -281,7 +305,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
 
       return {
         success: true,
-        authIdentity: user
+        authIdentity: user,
       }
     }
   }
@@ -292,7 +316,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
 
 The `register` method receives an object parameter with the following properties:
 
-- `data`: An object containing properties like `body`, which is the request body. The `body` property typically holds data relevant for registration such as the user's phone number.
+- `data`: An object containing properties like `body` that holds request-body parameters. Clients will pass relevant authentication data, such as the user's phone number, in the request body.
 - `authIdentityProviderService`: A service injected by the [Auth Module](../../../commerce-modules/auth/page.mdx) that allows you to manage auth identities.
 
 <Note>
@@ -303,11 +327,9 @@ The method receives other parameters, which you can find in the [Create Auth Mod
 
 #### Method Logic
 
-In the method, you extract the `phone` property from the request body, and return an error if it's not provided.
+In the method, you extract the `phone` property from the request body, and return an error if it's not provided. You also return an error if another user is using the same phone number.
 
-Then, if another user is using the same phone number, you throw an error.
-
-Otherwise, you create a new auth identity for the user. You set the phone number as the `entity_id` of the auth identity, which is a unique identifier for the user.
+Otherwise, you create a new auth identity for the user. You set the phone number as the `entity_id` of the auth identity, which is a unique identifier.
 
 #### Return Value
 
@@ -319,23 +341,35 @@ Finally, you return an object with the following properties:
 
 ### e. Implement authenticate Method
 
-When a customer (or other actor types) logs in, the `authenticate` method of an auth provider is called. This method uses custom logic to authenticate the user.
+When a customer (or another actor type) logs in, the `authenticate` method of an auth provider is called. This method uses custom logic to authenticate the user.
 
-Based on the authentication provider, the authentication flow can vary:
+Authentication providers may implement one of the following flows:
 
-- Direct authentication, where the user is authenticated using this method only.
+- Direct authentication, where the user is authenticated using this method only. For example, authenticating with an email and password.
 - Authentication with callback verification, where the user is authenticated using this method and then a callback is used to verify additional information.
 
-For the Phone Authentication Module Provider, you'll implement the second flow. The user will first be authenticated using the `authenticate` method to make sure the user exists. Later, they'll use the OTP they receive to verify their identity.
+For the Phone Authentication Module Provider, you'll implement the second flow. The user will first be authenticated using the `authenticate` method to make sure the user exists and generate an OTP. Then, they need to supply the OTP to verify their identity.
 
-{/* TODO add diagram */}
+![Diagram showcasing authentication with callback verification](https://res.cloudinary.com/dza7lstvk/image/upload/v1747749683/Medusa%20Resources/authentication-flow_ey59hw.jpg)
 
 So, add the `authenticate` method to the `PhoneAuthService` class:
 
-```ts title="src/modules/phone-auth/service.ts"
+export const authenticateHighlights = [
+  ["13", "phone", "Extract from request body."],
+  ["23", "retrieve", "Check that the user exists."],
+  ["33", "generateOTP", "Generate a 6-digit OTP."],
+  ["35", "update", "Store OTP in the provider metadat."],
+  ["41", "emit", "Emit an event with the generated OTP."],
+  ["51", "location", "Indicate that more actions are required."],
+  ["55", "generateOTP", "A method to generate the OTP"],
+  ["60", "logger", "Log the generated OTP for debugging."],
+  ["63", "expiresIn", "Expire the OTP in 60 seconds."]
+]
+
+```ts title="src/modules/phone-auth/service.ts" highlights={authenticateHighlights}
 // other imports...
 import { 
-  AuthIdentityDTO
+  AuthIdentityDTO,
 } from "@medusajs/types"
 import jwt from "jsonwebtoken"
 
@@ -350,7 +384,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     if (!phone) {
       return {
         success: false,
-        error: "Phone number is required"
+        error: "Phone number is required",
       }
     }
 
@@ -361,7 +395,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     } catch (error) {
       return {
         success: false,
-        error: "User with phone number does not exist"
+        error: "User with phone number does not exist",
       }
     }
 
@@ -370,7 +404,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     await authIdentityProviderService.update(phone, {
       provider_metadata: {
         otp: hashedOTP,
-      }
+      },
     })
 
     await this.event_bus.emit({
@@ -378,12 +412,12 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
       data: {
         otp,
         phone,
-      }
+      },
     }, {})
 
     return {
       success: true,
-      location: "otp"
+      location: "otp",
     }
   }
 
@@ -395,7 +429,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     this.logger.info(`Generated OTP: ${otp}`)
     
     const hashedOTP = jwt.sign({ otp }, this.options.jwtSecret, {
-      expiresIn: "60s"
+      expiresIn: "60s",
     })
     
     return { hashedOTP, otp }
@@ -409,7 +443,7 @@ You add two methods: the `authenticate` method, and a helper `generateOTP` metho
 
 The `authenticate` method receives an object parameter with the following properties:
 
-- `data`: An object containing properties like `body`, which is the request body. The `body` property typically holds data relevant for authentication such as the user's phone number.
+- `data`: An object containing properties like `body` that holds request-body parameters. Clients will pass relevant authentication data, such as the user's phone number, in the request body.
 - `authIdentityProviderService`: A service injected by the [Auth Module](../../../commerce-modules/auth/page.mdx) that allows you to manage auth identities.
 
 <Note>
@@ -420,9 +454,7 @@ The method receives other parameters, which you can find in the [Create Auth Mod
 
 #### authenticate Logic
 
-In the method, you extract the `phone` property from the request body, and return an error if it's not provided.
-
-Then, you retrieve the user's auth identity using the `authIdentityProviderService`. If the user doesn't exist, you return an error.
+In the method, you return an error if the `phone` property is not provided in the request body, or if a user with that phone number doesn't exist.
 
 Next, you generate a 6-digit OTP using the `generateOTP` method. Notice that you currently log the OTP for debugging purposes. You can remove this line later once you integrate Twilio SMS.
 
@@ -435,7 +467,7 @@ Then, you emit an event with the generated OTP and the user's phone number. This
 Finally, you return an object with the following properties:
 
 - `success`: A boolean indicating whether the authentication was successful.
-- `location`: The location indicates that the user should be perform additional verification. In this case, you set the location to `otp`, which indicates that the user should verify their OTP.
+- `location`: A string indicating a URL to perform additional actions in. In this case, you set the location to `otp`, indicating that the user should verify with the OTP.
 - `error`: An error message if the authentication failed.
 
 ### f. Implement validateCallback Method
@@ -444,9 +476,19 @@ When an authentication provider requires a callback to verify the user, the Medu
 
 You can use this method to verify the OTP that the user entered. If valid, you return the logged in user, and the Medusa application will return a JWT token that the user can use to authenticate in the application.
 
+![Diagram showcasing how callback verification fits in the authentication flow](https://res.cloudinary.com/dza7lstvk/image/upload/v1747749734/Medusa%20Resources/callback-flow_yney5a.jpg)
+
 So, add the `validateCallback` method to the `PhoneAuthService` class:
 
-```ts title="src/modules/phone-auth/service.ts"
+export const validateCallbackHighlights = [
+  ["7", "phone", "Extract phone from request query."],
+  ["7", "otp", "Extract OTP from request query."],
+  ["16", "retrieve", "Check that the user exists."],
+  ["37", "verify", "Verify that the OTP is correct and hasn't expired."],
+  ["52", "update", "Remove OTP from provider metadata."],
+]
+
+```ts title="src/modules/phone-auth/service.ts" highlights={validateCallbackHighlights}
 class PhoneAuthService extends AbstractAuthModuleProvider {
   // ...
   async validateCallback(
@@ -458,7 +500,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     if (!phone || !otp) {
       return {
         success: false,
-        error: "Phone number and OTP are required"
+        error: "Phone number and OTP are required",
       }
     }
 
@@ -469,7 +511,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     if (!user) {
       return {
         success: false,
-        error: "User with phone number does not exist"
+        error: "User with phone number does not exist",
       }
     }
     
@@ -478,7 +520,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     if (!userProvider || !userProvider.provider_metadata?.otp) {
       return {
         success: false,
-        error: "User with phone number does not have a phone auth provider"
+        error: "User with phone number does not have a phone auth provider",
       }
     }
     
@@ -494,19 +536,19 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
     } catch (error) {
       return {
         success: false,
-        error: error.message || "Invalid OTP"
+        error: error.message || "Invalid OTP",
       }
     }
     
     const updatedUser = await authIdentityProviderService.update(phone, {
       provider_metadata: {
         otp: null,
-      }
+      },
     })
 
     return {
       success: true,
-      authIdentity: updatedUser
+      authIdentity: updatedUser,
     }
   }
 }
@@ -516,7 +558,7 @@ class PhoneAuthService extends AbstractAuthModuleProvider {
 
 The `validateCallback` method receives an object parameter with the following properties:
 
-- `data`: An object containing properties like `query`, which is the request query. The `query` property typically holds data relevant for authentication such as the user's phone number and OTP.
+- `data`: An object containing properties like `query` that holds query parameters. Clients will pass relevant authentication data, such as the user's phone number and OTP, in the request query.
 - `authIdentityProviderService`: A service injected by the [Auth Module](../../../commerce-modules/auth/page.mdx) that allows you to manage auth identities.
 
 <Note>
@@ -527,9 +569,7 @@ The method receives other parameters, which you can find in the [Create Auth Mod
 
 #### Method Logic
 
-In the method, you extract the `phone` and `otp` properties from the request query, and return an error if they're not provided.
-
-Then, you retrieve the user's auth identity using the `authIdentityProviderService`. If the user doesn't exist, you return an error.
+In the method, you return an error if the phone and otp aren't provided in the request query, or if a user with that phone number doesn't exist.
 
 Next, you verify that the OTP provided by the user is correct. You retrieve the hashed OTP from the `provider_metadata` property of the user's auth identity. If the OTP is not valid, you return an error.
 
@@ -561,7 +601,7 @@ To create the module's definition, create the file `src/modules/phone-auth/index
 import PhoneAuthService from "./service"
 import { 
   ModuleProvider, 
-  Modules
+  Modules,
 } from "@medusajs/framework/utils"
 
 export default ModuleProvider(Modules.AUTH, {
@@ -582,7 +622,7 @@ In `medusa-config.ts`, add a `modules` property:
 
 ```ts title="medusa-config.ts"
 // other imports...
-import { Modules, ContainerRegistrationKeys } from '@medusajs/framework/utils'
+import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 module.exports = defineConfig({
   // ...
@@ -592,7 +632,7 @@ module.exports = defineConfig({
       dependencies: [
         Modules.CACHE, 
         ContainerRegistrationKeys.LOGGER, 
-        Modules.EVENT_BUS
+        Modules.EVENT_BUS,
       ],
       options: {
         providers: [
@@ -611,17 +651,19 @@ module.exports = defineConfig({
         ],
       },
     },
-  ]
+  ],
 })
 ```
 
 To pass a Auth Module Provider to the Auth Module, you add the `modules` property to the Medusa configuration and pass the Auth Module in its value.
 
-The Auth Module accepts a `providers` option, which is an array of Auth Module Providers to register. You register the `emailpass` provider, which is registrated by default when you don't provide any other providers.
+The Auth Module accepts a `dependencies` option, allowing you to inject dependencies into the containers of the module and its providers. The Auth Module requires passing the [Cache Module](../../../infrastructure-modules/cache/page.mdx) and Logger, but you also inject the `event_bus` dependency to use the Event Module's service in the Phone Authentication Module Provider.
 
-Each provider is an object with the following properties:
+The Auth Module also accepts a `providers` option, which is an array of Auth Module Providers to register. You register the `emailpass` provider, which is registrated by default when you don't provide any other providers.
 
-- `resolve`: The path to the module provider. In this case, it's the path to the `src/modules/phone-auth` directory.
+To register the Phone Authentication Module Provider, you add an object to the `providers` array with the following properties:
+
+- `resolve`: The NPM package or path to the module provider. In this case, it's the path to the `src/modules/phone-auth` directory.
 - `id`: The ID of the module provider. The auth provider is then registered with the ID `au_{id}`.
 - `options`: The options to pass to the module provider. These are the options you defined in the `Options` interface of the module provider's service.
 
@@ -631,7 +673,11 @@ By default, customers and admin users can be authenticated using the `emailpass`
 
 In `medusa-config.ts`, add to `projectConfig.http` a new `authMethodsPerActor` property:
 
-```ts title="medusa-config.ts"
+export const authMethodsPerActorHighlights = [
+  ["8", "customer", "Enable the emailpass and phone-auth providers for customers."],
+]
+
+```ts title="medusa-config.ts" highlights={authMethodsPerActorHighlights}
 module.exports = defineConfig({
   projectConfig: {
     // ...
@@ -641,7 +687,7 @@ module.exports = defineConfig({
         user: ["emailpass"],
         customer: ["emailpass", "phone-auth"],
       },
-    }
+    },
   },
   // ...
 })
@@ -653,7 +699,7 @@ In this case, you enable the `phone-auth` provider for customers. You can also e
 
 ### Test Out Phone Authentication
 
-In this section, you'll test out the Phone Authentication Module Provider using Medusa's API routes. You can, instead, skip to later sections to test it out using the [Next.js Starter Storefront](#step-4-use-phone-authentication-in-the-nextjs-starter-storefront).
+In this section, you'll test out the Phone Authentication Module Provider using Medusa's API routes. You can, instead, test it out later using the [Next.js Starter Storefront](#step-4-use-phone-authentication-in-the-nextjs-starter-storefront).
 
 First, start the Medusa application with the following command:
 
@@ -663,7 +709,7 @@ npm run start
 
 #### Prerequisite: Retrieve Publishable API Key
 
-Before you start testing the authentication provider using the API routes, you need to retrieve your application's publishable API key. This key is necessary to send requests to API routes starting wit `/store`.
+Before you start testing the authentication provider using the API routes, you need to retrieve your application's publishable API key. This key is necessary to send requests to API routes starting with `/store`.
 
 To retrieve the publishable API key:
 
@@ -849,6 +895,8 @@ In this step, you'll create a Twilio Notification Module Provider, then use it t
 
 Before you start implementing the Twilio Notification Module Provider, install the Twilio SDK to interact with the Twilio API.
 
+Run the following command in the Medusa application directory:
+
 ```bash npm2yarn
 npm install twilio
 ```
@@ -865,10 +913,19 @@ A Notification Module Provider has a service that contains the sending logic. Th
 
 So, create the file `src/modules/twilio-sms/service.ts` with the following content:
 
-```ts title="src/modules/twilio-sms/service.ts"
+export const twilioSmsServiceHighlights = [
+  ["8", "accountSid", "Twilio account SID."],
+  ["9", "authToken", "Twilio auth token."],
+  ["10", "from", "Twilio phone number to send the SMS from."],
+  ["14", "identifier", "Unique identifier for the module."],
+  ["15", "client", "Twilio client to send the SMS."],
+]
+
+```ts title="src/modules/twilio-sms/service.ts" highlights={twilioSmsServiceHighlights}
 import { 
-  AbstractNotificationProviderService
+  AbstractNotificationProviderService,
 } from "@medusajs/framework/utils"
+import { Twilio } from "twilio"
 
 type InjectedDependencies = {}
 
@@ -894,11 +951,11 @@ class TwilioSmsService extends AbstractNotificationProviderService {
 
 You'll get a type error about implementing the abstract methods of the `AbstractNotificationProviderService` class, which you'll add in the next steps.
 
-A Notification Module Provider must an `identifier`, which is a unique identifier for the module. This identifier is used to register the module in the Medusa application.
+A Notification Module Provider must have an `identifier` static property, which is a unique identifier for the module. This identifier is used to register the module in the Medusa application.
 
 A module provider's constructor receives two parameters:
 
-- `container`: The [module's container](!docs!/learn/fundamentals/modules/container) that contains Framework resources available to the module. You don't need to access any resources for this tutorial.
+- `container`: The [module's container](!docs!/learn/fundamentals/modules/container) that contains Framework resources available to the module. You don't need to access any resources for this provider.
 - `options`: Options that are passed to the module provider when it's registered in Medusa's configurations. You define the following option:
     - `accountSid`: The Twilio account SID.
     - `authToken`: The Twilio auth token.
@@ -953,24 +1010,38 @@ The only required method for a Notification Module Provider is the `send` method
 
 So, add the `send` method to the `TwilioSmsService` class:
 
-```ts title="src/modules/twilio-sms/service.ts"
+export const sendHighlights = [
+  ["12", "to", "Extract the phone number to send the SMS to."],
+  ["12", "content", "Extract the content of the SMS."],
+  ["12", "template", "Extract the template to use for the SMS."],
+  ["12", "data", "Extract the data to use in the template."],
+  ["13", "contentText", "Set the content text to either the text or template content."],
+  ["13", "getTemplateContent", "Get the content for the template."],
+  ["17", "message", "Send the SMS using Twilio's client."],
+  ["28", "getTemplateContent", "A method to get the content for the template."],
+]
+
+```ts title="src/modules/twilio-sms/service.ts" highlights={sendHighlights}
 // other imports...
 import { 
   ProviderSendNotificationDTO, 
-  ProviderSendNotificationResultsDTO
+  ProviderSendNotificationResultsDTO,
 } from "@medusajs/types"
 
 class TwilioSmsService extends AbstractNotificationProviderService {
   // ...
-  async send(notification: ProviderSendNotificationDTO): Promise<ProviderSendNotificationResultsDTO> {
+  async send(
+    notification: ProviderSendNotificationDTO
+  ): Promise<ProviderSendNotificationResultsDTO> {
     const { to, content, template, data } = notification
-    const templateContent = await this.getTemplateContent(template, data)
-    const contentText = content?.text || templateContent
+    const contentText = content?.text || await this.getTemplateContent(
+      template, data
+    )
 
     const message = await this.client.messages.create({
       body: contentText,
       from: this.from,
-      to
+      to,
     })
 
     return {
@@ -978,7 +1049,10 @@ class TwilioSmsService extends AbstractNotificationProviderService {
     }
   }
 
-  async getTemplateContent(template: string, data?: Record<string, unknown> | null): Promise<string> {
+  async getTemplateContent(
+    template: string, 
+    data?: Record<string, unknown> | null
+  ): Promise<string> {
     switch (template) {
       case "otp-template":
         if (!data?.otp) {
@@ -1001,7 +1075,7 @@ The `send` method receives an object parameter with the following properties:
 
 - `to`: The phone number to send the SMS to.
 - `content`: An object containing the content of the SMS. The `text` property is the text to send.
-- `template`: The template to use for the SMS. This is used to retrieve the content of the SMS if none is provided in the `content` property.
+- `template`: The template to use for the SMS. This is used to retrieve the fallback content of the SMS if `content.text` is not provided.
 - `data`: An object containing the data to use in the template. This is used to replace placeholders in the template with actual values.
 
 <Note>
@@ -1026,9 +1100,7 @@ Finally, you return an object that has an `id` property with the ID of the sent 
 
 ### f. Export Module Definition
 
-You've now finished implementing the necessary methods for the Twilio Notification Module Provider.
-
-The final piece to a module is its definition, which you export in an `index.ts` file at the module's root directory. This definition tells Medusa the name of the module, its service, and optionally its loaders.
+You've now finished implementing the necessary methods for the Twilio Notification Module Provider. You only need to export its definition.
 
 To create the module's definition, create the file `src/modules/twilio-sms/index.ts` with the following content:
 
@@ -1044,7 +1116,7 @@ export default ModuleProvider(Modules.NOTIFICATION, {
 })
 ```
 
-You use `ModuleProvider` from the Modules SDK to create the module provider's definition. It accepts two parameters:
+You use `ModuleProvider` from the Modules SDK to create the module provider's definition passing it two parameters:
 
 1. The name of the module that this provider belongs to, which is `Modules.NOTIFICATION` in this case.
 2. An object with a required property `services` indicating the module provider's services. Each of these services will be registered as notification providers in Medusa.
@@ -1085,20 +1157,20 @@ module.exports = defineConfig({
           },
         ],
       },
-    }
-  ]
+    },
+  ],
 })
 ```
 
 You pass the Notification Module in the `modules` property to register the Twilio Notification Module Provider.
 
-The Notification Module accepts a `providers` option, which is an array of Notification Module Providers to register. You register the `local` provider, which is registrated by default when you don't provide any other providers.
+The Notification Module accepts a `providers` option, which is an array of Notification Module Providers to register. You register the `local` provider, which is registered by default when you don't provide any other providers.
 
-Each provider is an object with the following properties:
+To register the Twilio Notification Module Provider, you add an object with the following properties:
 
-- `resolve`: The path to the module provider. In this case, it's the path to the `src/modules/twilio-sms` directory.
-- `id`: The ID of the module provider. The notification provider is then registered with the ID `nt_{id}`.
-- `options`: The options to pass to the module provider. These are the options you defined in the `Options` interface of the module provider's service.
+- `resolve`: The path to the module provider.
+- `id`: The ID of the module provider. The notification provider is then registered with the ID `np_{identifier}_{id}`.
+- `options`: The options to pass to the module provider. These include the options you defined in the `Options` interface of the module provider's service.
     - `channels`: The channels that the notification provider supports. In this case, you set it to `sms`, which is the channel used to send SMS notifications.
     - `accountSid`: The Twilio account SID.
     - `authToken`: The Twilio auth token.
@@ -1130,7 +1202,7 @@ Now that you have integrated Twilio into Medusa, you can use it to send the OTP 
 
 You can listen to events in a [subscriber](!docs!/learn/fundamentals/events-and-subscribers). A subscriber is an asynchronous function that listens to events to perform actions when the event is emitted.
 
-In this step, you'll create a subscriber that listens to the `order.placed` event and executes the `handleOrderPointsWorkflow` workflow.
+In this step, you'll create a subscriber that listens to the `phone-auth.otp.generated` event and sends an SMS to the customer with the OTP.
 
 <Note>
 
@@ -1140,7 +1212,13 @@ Refer to the [Events and Subscribers](!docs!/learn/fundamentals/events-and-subsc
 
 Subscribers are created in a TypeScript or JavaScript file under the `src/subscribers` directory. So, to create a subscriber, create the file `src/subscribers/send-otp.ts` with the following content:
 
-```ts title="src/subscribers/send-otp.ts"
+export const sendOtpHighlights = [
+  ["14", "notificationModuleService", "Resolve the Notification Module's service."],
+  ["18", "createNotifications", "Send the OTP to the user using Twilio."],
+  ["29", `"phone-auth.otp.generated"`, "The event the subscriber is listening to."],
+]
+
+```ts title="src/subscribers/send-otp.ts" highlights={sendOtpHighlights}
 import {
   SubscriberArgs,
   type SubscriberConfig,
@@ -1183,7 +1261,7 @@ The subscriber function accepts an object with the following properties:
 - `event`: An object with the event's data payload. In the `authenticate` method, you emitted the event with the following data:
     - `phone`: The phone number of the user.
     - `otp`: The OTP that was generated.
-- `container`: The [Medusa container](!docs!/learn/fundamentals/medusa-container), which you can use to resolve Framework and Commerce resources.
+- `container`: The [Medusa container](!docs!/learn/fundamentals/medusa-container), which you can use to resolve Framework and commerce resources.
 
 In the subscriber function, you resolve the Notification Module's service from the Medusa container. Then, you use its `createNotifications` method to send the OTP to the user.
 
@@ -1191,10 +1269,10 @@ Under the hood, the Notification Module's service delegates the sending to the N
 
 The `createNotifications` method accepts an object with the following properties:
 
-- `to`: The phone number to send the SMS to. You use the phone number from the event's data payload.
-- `channel`: The channel to use to send the SMS, which is `sms`.
-- `template`: The template to use for the SMS content, which is `otp-template`.
-- `data`: An object containing the data to use in the template. You pass the OTP code to the template.
+- `to`: The phone number to send the notification to. You use the phone number from the event's data payload.
+- `channel`: The channel to use to send the notification, which is `sms`.
+- `template`: The template to use for the notification content, which is `otp-template`.
+- `data`: An object containing the data to use in the template. You pass the OTP to the template.
 
 ### j. Test it Out
 
@@ -1206,7 +1284,7 @@ Alternatively, you can also test it out after customizing the Next.js Starter St
 
 <Note>
 
-Make sure to remove the OTP logging line in the `generateOTP` method now that you have integrated Twilio SMS.
+Make sure to remove the OTP logging line in the `generateOTP` method of the Phone Authentication Module Provider's service now that you have integrated Twilio SMS.
 
 </Note>
 
@@ -1234,7 +1312,7 @@ cd ../medusa-phone-auth-storefront # change based on your project name
 
 To easily show a phone input where the user can enter their phone number, install the `react-phone-number-input` package:
 
-```bash npm2yarn
+```bash npm2yarn badgeLabel="Storefront" badgeColor="blue"
 npm install react-phone-number-input
 ```
 
@@ -1252,10 +1330,14 @@ In `src/lib/data/customer.ts`, add the following function:
 export const authenticateWithPhone = async (phone: string) => {
   try {
     const response = await sdk.auth.login("customer", "phone-auth", {
-      phone
+      phone,
     })
 
-    if (typeof response === "string" || !response.location || response.location !== "otp") {
+    if (
+      typeof response === "string" || 
+      !response.location || 
+      response.location !== "otp"
+    ) {
       throw new Error("Failed to login")
     }
 
@@ -1270,7 +1352,7 @@ The function accepts the phone number as a parameter.
 
 In the function, you use the [JS SDK](../../../js-sdk/page.mdx), which is configured within the Next.js Starter Storefront, to send a request to the `/auth/customer/phone-auth` API route. You pass the phone number in the request body.
 
-If the request desn't return a `location` property set to `otp`, you throw an error. Otherwise, you return `true` to indicate that the request was successful.
+If the request doesn't return a `location` property set to `otp`, you throw an error. Otherwise, you return `true` to indicate that the request was successful.
 
 ### c. add Verify OTP Function
 
@@ -1278,7 +1360,14 @@ Next, you'll add the `verifyOTP` function, which sends a request to the `/auth/c
 
 In `src/lib/data/customer.ts`, add the following function:
 
-```ts title="src/lib/data/customer.ts" badgeLabel="Storefront" badgeColor="blue"
+export const verifyOtpHighlights = [
+  ["9", "callback", "Verify the OTP using the callback API route."],
+  ["14", "setAuthToken", "Set the authentication token."],
+  ["17", "revalidateTag", "Revalidate the customer cache tag to refresh customer-related UI."],
+  ["19", "transferCart", "Transfer the cart from guest to authenticated customer."],
+]
+
+```ts title="src/lib/data/customer.ts" badgeLabel="Storefront" badgeColor="blue" highlights={verifyOtpHighlights}
 export const verifyOtp = async ({
   otp,
   phone,
@@ -1313,7 +1402,7 @@ The function accepts an object with the following properties:
 
 In the function, you use the JS SDK to send a request to the `/auth/customer/phone-auth/callback` API route. You pass the phone number and OTP in the request body.
 
-If the request is successful and you receive a token, you set the token as the authentication token an refresh the customer cache tag. This ensures that all customer-related UI is updated after logging in, such as showing the customer's profile when accessing the `/account` page.
+If the request is successful and you receive a token, you set the token in the cookies and refresh the customer cache. This ensures that all customer-related UI is updated after logging in, such as showing the customer's profile when accessing the `/account` page.
 
 Then, you call the `transferCart` function to transfer the cart from the guest user to the authenticated customer.
 
@@ -1325,7 +1414,14 @@ The last function you'll add is the `registerWithPhone` function, which will reg
 
 In `src/lib/data/customer.ts`, add the following function:
 
-```ts title="src/lib/data/customer.ts" badgeLabel="Storefront" badgeColor="blue"
+export const registerWithPhoneHighlights = [
+  ["11", "regToken", "Retrieve the registration token."],
+  ["20", "setAuthToken", "Set the authentication token."],
+  ["33", "create", "Create the customer."],
+  ["39", "authenticateWithPhone", "Authenticate the customer using their phone number."],
+]
+
+```ts title="src/lib/data/customer.ts" badgeLabel="Storefront" badgeColor="blue" highlights={registerWithPhoneHighlights}
 export const registerWithPhone = async ({
   firstName,
   lastName,
@@ -1336,7 +1432,9 @@ export const registerWithPhone = async ({
   phone: string
 }) => {
   try {
-    const { token: regToken } = await sdk.client.fetch<{ token: string }>(`/auth/customer/phone-auth/register`, {
+    const { token: regToken } = await sdk.client.fetch<
+      { token: string }
+    >(`/auth/customer/phone-auth/register`, {
       method: "POST",
       body: {
         phone,
@@ -1349,7 +1447,7 @@ export const registerWithPhone = async ({
     }
 
     const email = `${phone}@gmail.com`
-    const customerForm = {
+    const customerData = {
       email,
       first_name: firstName,
       last_name: lastName,
@@ -1357,7 +1455,7 @@ export const registerWithPhone = async ({
     }
     
     await sdk.store.customer.create(
-      customerForm,
+      customerData,
       {},
       headers
     )
@@ -1377,7 +1475,7 @@ The function accepts an object with the following properties:
 
 In the function, you retrieve a registration token for the customer using the `/auth/customer/phone-auth/register` API route. You pass the phone number in the request body.
 
-Then, after setting the registration token as the authentication token, you create a customer using the [Create Customer](!api!/store#customers_postcustomers) API route. You pass the following properties in the request body:
+Then, after setting the registration token in the cookies, you create a customer using the [Create Customer](!api!/store#customers_postcustomers) API route. You pass the following properties in the request body:
 
 - `email`: The email of the customer. You set it to the phone number with a `@gmail.com` domain.
 - `first_name`: The first name of the customer.
@@ -1392,7 +1490,18 @@ Next, you'll add an OTP form that allows the customer to enter the OTP they rece
 
 Create the file `src/modules/account/components/otp/index.tsx` with the following content:
 
-```tsx title="src/modules/account/components/otp/index.tsx" badgeLabel="Storefront" badgeColor="blue"
+export const otpHighlights = [
+  ["13", "otp", "The OTP entered by the customer."],
+  ["14", "error", "The error message to show if the OTP verification fails."],
+  ["15", "isLoading", "A boolean indicating whether the OTP verification is in progress."],
+  ["16", "countdown", "The countdown timer for resending the OTP."],
+  ["17", "inputRefs", "A ref to store the input elements for the OTP digits."],
+  ["19", "handleSubmit", "Verify OTP on submission."],
+  ["33", "handleResend", "Resend OTP to the customer."],
+  ["38", "handlePaste", "Improve paste experience for OTP input."],
+]
+
+```tsx title="src/modules/account/components/otp/index.tsx" badgeLabel="Storefront" badgeColor="blue" highlights={otpHighlights}
 "use client"
 
 import { Input } from "@medusajs/ui"
@@ -1469,7 +1578,13 @@ Next, you'll add `useEffect` hooks to handle changes in the state variables.
 
 Replace the `TODO` with the following:
 
-```tsx title="src/modules/account/components/otp/index.tsx" badgeLabel="Storefront" badgeColor="blue"
+export const useEffectHighlights = [
+  ["1", "useEffect", "Focus the first input element when the component mounts."],
+  ["7", "useEffect", "Automatically submit the OTP when the customer enters six digits."],
+  ["15", "useEffect", "Add an interval to update the countdown timer every second."],
+]
+
+```tsx title="src/modules/account/components/otp/index.tsx" badgeLabel="Storefront" badgeColor="blue" highlights={useEffectHighlights}
 useEffect(() => {
   if (inputRefs.current[0]) {
     inputRefs.current[0].focus()
@@ -1486,7 +1601,9 @@ useEffect(() => {
 
 useEffect(() => {
   const timer = setInterval(() => {
-    setCountdown((prev) => (prev > 0 ? prev - 1 : 0))
+    setCountdown((prev) => {
+      return prev > 0 ? prev - 1 : 0
+    })
   }, 1000)
 
   return () => clearInterval(timer)
@@ -1517,7 +1634,7 @@ return (
       Verify Phone Number
     </h1>
     <p className="text-center text-base-regular text-ui-fg-base mb-4">
-      Enter the code sent to your phone number to verify your account.
+      Enter the code sent to your phone number to login.
     </p>
     <div className="flex gap-2 mb-4">
       {[...Array(6)].map((_, index) => (
@@ -1572,7 +1689,7 @@ return (
 )
 ```
 
-You show six input elements for the OTP digits. When a value is entered in an input, the focus moves to the next input. 
+You show six input elements for the OTP digits. When a value is entered in an input, the focus moves to the next input. In addition, when the customer presses backspace on an empty input, the focus moves to the previous input. 
 
 You also show a resend button that allows the customer to resend the OTP once the countdown timer reaches zero.
 
@@ -1584,7 +1701,7 @@ You'll now add a registration form that allows the customer to register using th
 
 First, in `src/modules/account/templates/login-template.tsx`, update the `LOGIN_VIEW` to the following:
 
-```tsx title="src/modules/account/templates/login-template.tsx" badgeLabel="Storefront" badgeColor="blue"
+```tsx title="src/modules/account/templates/login-template.tsx" badgeLabel="Storefront" badgeColor="blue" highlights={[["4"], ["5"]]}
 export enum LOGIN_VIEW {
   SIGN_IN = "sign-in",
   REGISTER = "register",
@@ -1593,11 +1710,23 @@ export enum LOGIN_VIEW {
 }
 ```
 
-By default, the login template supports switching between the login and registration views for email and password authentication. You now added two new views: login and registration with phone number.
+By default, the login template supports switching between the login and registration views for email and password authentication. With the above change, you add two new views: login and registration with phone number.
 
 Then, to add the registration form, create the file `src/modules/account/components/register-phone/index.tsx` with the following content:
 
-```tsx title="src/modules/account/components/register-phone/index.tsx" badgeLabel="Storefront" badgeColor="blue"
+export const registerPhoneHighlights = [
+  ["20", "firstName", "The first name of the customer."],
+  ["21", "lastName", "The last name of the customer."],
+  ["22", "phone", "The phone number of the customer."],
+  ["23", "error", "The error message to show if the registration fails."],
+  ["24", "loading", "A boolean indicating whether the registration is in progress."],
+  ["25", "enterOtp", "A boolean indicating whether to show the OTP form."],
+  ["26", "countryCode", "The country code of the customer."],
+  ["28", "handleSubmit", "Register customer on form submision."],
+  ["45", "enterOtp", "Show the OTP form after successful registration."],
+]
+
+```tsx title="src/modules/account/components/register-phone/index.tsx" badgeLabel="Storefront" badgeColor="blue" highlights={registerPhoneHighlights}
 "use client"
 
 import { useState } from "react"
@@ -1606,8 +1735,8 @@ import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { registerWithPhone } from "@lib/data/customer"
-import 'react-phone-number-input/style.css'
-import PhoneInput from 'react-phone-number-input'
+import "react-phone-number-input/style.css"
+import PhoneInput from "react-phone-number-input"
 import { Otp } from "../otp"
 import { useParams } from "next/navigation"
 import { Button } from "@medusajs/ui"
@@ -1801,15 +1930,25 @@ Next, you'll add a login form that allows the customer to log in using their pho
 
 To create the form, create the file `src/modules/account/components/login-phone/index.tsx` with the following content:
 
-```tsx title="src/modules/account/components/login-phone/index.tsx" badgeLabel="Storefront" badgeColor="blue"
+export const loginPhoneHighlights = [
+  ["18", "phone", "The phone number entered by the customer."],
+  ["19", "error", "The error message to show if the login fails."],
+  ["20", "loading", "A boolean indicating whether the login is in progress."],
+  ["21", "enterOtp", "A boolean indicating whether to show the OTP form."],
+  ["22", "countryCode", "The country code of the customer."],
+  ["24", "handleSubmit", "Authenticate customer on form submission."],
+  ["37", "enterOtp", "Show the OTP form after successful login."],
+]
+
+```tsx title="src/modules/account/components/login-phone/index.tsx" badgeLabel="Storefront" badgeColor="blue" highlights={loginPhoneHighlights}
 "use client"
 
 import { authenticateWithPhone } from "@lib/data/customer"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { useState } from "react"
-import 'react-phone-number-input/style.css'
-import PhoneInput from 'react-phone-number-input'
+import "react-phone-number-input/style.css"
+import PhoneInput from "react-phone-number-input"
 import { Otp } from "../otp"
 import { useParams } from "next/navigation"
 import { Button } from "@medusajs/ui"
@@ -1975,7 +2114,7 @@ Open your browser, navigate to `http://localhost:8000`, and click on the "Accoun
 
 ![Login form with phone number input](https://res.cloudinary.com/dza7lstvk/image/upload/v1747739945/Medusa%20Resources/CleanShot_2025-05-20_at_14.18.36_2x_ubuika.png)
 
-You can also switch to the registration form by clicking on the "Join us" link.
+You can also switch to the registration form by clicking on the "Join us" link below the login form.
 
 ![Registration form with phone number input](https://res.cloudinary.com/dza7lstvk/image/upload/v1747739988/Medusa%20Resources/CleanShot_2025-05-20_at_14.19.35_2x_btlc2s.png)
 
@@ -1989,7 +2128,7 @@ After you enter the six digits, you'll be logged in and you'll see your profile 
 
 ---
 
-## Step 5: Updates to Profile Page
+## Step 5: Disallow Phone Updates
 
 The phone authentication feature is now complete, but there are two improvements you can make:
 
@@ -1998,7 +2137,7 @@ The phone authentication feature is now complete, but there are two improvements
 
 ### a. Show Phone Number in Profile Page
 
-To show the phone number in the profile page, in `src/modules/account/components/overview/index.tsx`, find the following in the `return` statement:
+To show the phone number in the profile page instead of the email, in `src/modules/account/components/overview/index.tsx`, find the following in the `return` statement:
 
 ```tsx title="src/modules/account/components/overview/index.tsx" badgeLabel="Storefront" badgeColor="blue"
 <span
@@ -2030,16 +2169,21 @@ If you check the profile page now, you'll see the phone number instead of the em
 
 Next, you'll remove the fields to update email and phone number from the profile page.
 
-In `src/app/[countryCode]/(main)/account/@dashboard/profile/page.tsx`, remove the following lines from the `return` statement:
+In `src/app/[countryCode]/(main)/account/@dashboard/profile/page.tsx`, find the following lines to remove from the `return` statement:
 
 ```tsx title="src/app/[countryCode]/(main)/account/@dashboard/profile/page.tsx" badgeLabel="Storefront" badgeColor="blue"
-<Divider />
-<ProfileEmail customer={customer} />
-<Divider />
-<ProfilePhone customer={customer} />
+<div className="flex flex-col gap-y-8 w-full">
+  {/* ... */}
+  {/* Remove the following */}
+  <Divider />
+  <ProfileEmail customer={customer} />
+  <Divider />
+  <ProfilePhone customer={customer} />
+  {/* ... */}
+</div>
 ```
 
-If you go to your profile page and click on "Profile" in the sidebar, the email and phone number fields will be removed.
+If you go to your profile page and click on "Profile" in the sidebar, the email and phone number sections will be removed.
 
 ![Profile page without email and phone fields](https://res.cloudinary.com/dza7lstvk/image/upload/v1747740515/Medusa%20Resources/CleanShot_2025-05-20_at_14.28.09_2x_ugab7d.png)
 
@@ -2047,7 +2191,7 @@ If you go to your profile page and click on "Profile" in the sidebar, the email 
 
 While removing the email and phone fields from the profile page prevents customers using the storefront from updating their phone number, it doesn't prevent them from updating it using Medusa's API.
 
-In this section, you'll add a [middleware](!docs!/learn/fundamentals/api-routes/middlewares) to the `/store/customers/me` API route to prevent customers from updating their phone number.
+In this section, you'll add a [middleware](!docs!/learn/fundamentals/api-routes/middlewares) to the `/store/customers/me` API route that prevents customers from updating their phone number.
 
 A middleware is a function that's executed whenever a request is sent to an API route. It's executed before the route handler, allowing you to validate requests, apply authentication guards, and more.
 
@@ -2057,10 +2201,10 @@ Learn more in the [Middlewares](!docs!/learn/fundamentals/api-routes/middlewares
 
 </Note>
 
-To add a middleware, in your Medusa application, create the file `src/api/middlewares.ts` with the following content:
+To add a middleware in your Medusa application, create the file `src/api/middlewares.ts` with the following content:
 
 ```ts title="src/api/middlewares.ts" badgeLabel="Medusa Application" badgeColor="green"
-import { defineMiddlewares } from "@medusajs/framework/http";
+import { defineMiddlewares } from "@medusajs/framework/http"
 
 export default defineMiddlewares({
   routes: [
@@ -2073,15 +2217,15 @@ export default defineMiddlewares({
 
           if (phone) {
             return res.status(400).json({
-              error: "Phone number is not allowed to be updated"
+              error: "Phone number is not allowed to be updated",
             })
           }
 
           next()
-        }
-      ]
-    }
-  ]
+        },
+      ],
+    },
+  ],
 })
 ```
 
@@ -2089,25 +2233,25 @@ You define middlewares using the `defineMiddlewares` function. It accepts an obj
 
 Each object in `routes` has the following properties:
 
-- `matcher`: The API route to apply the middleware to. You apply it to the `/store/customers/me` route.
-- `method`: The HTTP method to apply the middleware to. You set it to `POST` so that the middleware is applied only tp `POST` requests to the `/store/customers/me` route.
-- `middlewares`: An array of middlewares to apply to the route. You add a middleware that throws an error if the request body contains a `phone` property. This prevents customers from updating their phone number using the API.
+- `matcher`: The API route path to apply the middleware on. You set it to `/store/customers/me`.
+- `method`: The HTTP method to apply the middleware to. You set it to `POST` so that the middleware is applied only on `POST` requests sent to the `/store/customers/me` route.
+- `middlewares`: An array of middlewares to apply on the route. You add a middleware that throws an error if the request body contains a `phone` property. This prevents customers from updating their phone number using the API.
 
-Any `POST` request to the `/store/customers/me` route will now be validated to ensure they're not updating the phone number.
+Any `POST` request to the `/store/customers/me` route will now be validated to ensure it's not updating the phone number.
 
 ---
 
 ## Next Steps
 
-You've now implemented phone authentication in Medusa with Twilio SMS integration.
+You've now implemented phone authentication in Medusa with Twilio SMS integration. You can further customize the phone authentication feature based on your business use case.
 
 ### Authenticate Other Actor Types
 
 This tutorial focused on authenticating customers using their phone number. However, you can also authenticate other actor types, such as admin users and vendors.
 
-To do that, first, enable the `phone-auth` authentication strategy in `medusa-config.js` for the actor types. For example:
+To do that, first, enable the `phone-auth` authentication strategy in `medusa-config.ts` for the actor types. For example:
 
-```ts title="medusa-config.js"
+```ts title="medusa-config.ts"
 module.exports = defineConfig({
   projectConfig: {
     // ...
@@ -2123,17 +2267,17 @@ module.exports = defineConfig({
 })
 ```
 
-Then, when sending requests to the authentication API routes mentioned in the [Test Out Phone Authentication](#test-out-phone-authentication) section, replace `customer` with the actor type you want to authenticate:
+Then, when sending requests to the authentication API routes mentioned in the [Test Out Phone Authentication](#test-out-phone-authentication) section, replace `customer` in the API route paths with the actor type you want to authenticate:
 
 - `/auth/customer/phone-auth/register` -> `/auth/user/phone-auth/register`
 - `/auth/customer/phone-auth` -> `/auth/user/phone-auth`
 - `/auth/customer/phone-auth/callback` -> `/auth/user/phone-auth/callback`
 
-Finally, update the UI to show the phone authentication option for the actor type you want to authenticate. This depends on the UI you're using, but you can follow a similar approach to the Next.js Starter Storefront customizations.
+Finally, update the UI to show the phone authentication option for the actor type you want to authenticate. This depends on the UI you're using, but you can follow an approach similar to the Next.js Starter Storefront customizations.
 
 <Note>
 
-The login form of Medusa Admin can't be customized, so you'll have to build a custom admin dashboard to support phone authentication.
+The login form of Medusa Admin can't be customized, so you'll have to build a custom admin dashboard to support phone authentication for admin users.
 
 </Note>
 
