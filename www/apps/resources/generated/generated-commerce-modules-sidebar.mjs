@@ -471,7 +471,7 @@ const generatedgeneratedCommerceModulesSidebarSidebar = {
           "isPathHref": true,
           "type": "category",
           "title": "Server Guides",
-          "autogenerate_tags": "server+auth",
+          "autogenerate_tags": "auth+server",
           "autogenerate_as_ref": true,
           "sort_sidebar": "alphabetize",
           "description": "Learn how to use the Auth Module in your customizations on the Medusa application server.",
@@ -504,7 +504,7 @@ const generatedgeneratedCommerceModulesSidebarSidebar = {
               "loaded": true,
               "isPathHref": true,
               "type": "ref",
-              "title": "Phone Authentication",
+              "title": "Implement Phone Authentication",
               "path": "https://docs.medusajs.com/resources/how-to-tutorials/tutorials/phone-auth",
               "children": []
             }
