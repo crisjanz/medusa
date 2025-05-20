@@ -1,5 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { IOrderModuleService, OrderDTO } from "@medusajs/types"
+import { createOrderChangeWorkflow } from "@medusajs/core-flows"
 import { Modules } from "@medusajs/utils"
 import {
   adminHeaders,
@@ -639,6 +640,22 @@ medusaIntegrationTestRunner({
         billing_address_id: string
       }
 
+      const { result: toDeleteOrderEdit } = await createOrderChangeWorkflow(
+        appContainer
+      ).run({
+        input: {
+          order_id: toDeleteOrder.id,
+        },
+      })
+
+      const { result: persistedOrderEdit } = await createOrderChangeWorkflow(
+        appContainer
+      ).run({
+        input: {
+          order_id: persistedOrder.id,
+        },
+      })
+
       await orderModule.deleteOrders([toDeleteOrder.id])
 
       const orders = (
@@ -658,6 +675,13 @@ medusaIntegrationTestRunner({
           persistedOrder.billing_address_id,
         ])
       )
+
+      const orderChangeRows = (
+        await dbConnection.raw("select * from order_change;")
+      ).rows
+
+      expect(orderChangeRows.length).toBe(1)
+      expect(orderChangeRows[0].id).toBe(persistedOrderEdit.id)
     })
   },
 })
